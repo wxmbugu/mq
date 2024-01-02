@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::{ErrorKind, Read, Write};
 use std::net::TcpStream;
-use std::result;
 use std::sync::{Arc, RwLock};
+use std::{result, u8};
 pub mod internal;
 
 pub use crate::internal::messages::*;
@@ -13,11 +13,14 @@ pub type Result<T> = result::Result<T, ()>;
 #[derive(Debug)]
 pub struct Server {
     pub stream: TcpStream,
-    pub caches: Arc<RwLock<HashMap<String, Queue>>>,
+    pub caches: Arc<RwLock<HashMap<String, HashSet<Vec<u8>>>>>,
 }
 
 impl Server {
-    pub fn new(stream: TcpStream, caches: Arc<RwLock<HashMap<String, Queue>>>) -> Server {
+    pub fn new(
+        stream: TcpStream,
+        caches: Arc<RwLock<HashMap<String, HashSet<Vec<u8>>>>>,
+    ) -> Server {
         Server { stream, caches }
     }
     pub fn run(&mut self, buffer: &mut [u8]) {
@@ -33,7 +36,10 @@ impl Server {
                         eprintln!("EROR: would have blocked");
                         break;
                     }
-                    _ => panic!("Got an error: {}", err),
+                    _ => {
+                        eprintln!("ERROR: Got an unexpected error: {:?}", err);
+                        break;
+                    }
                 },
             };
             let message = decode(&buffer[..bytes_read]);
@@ -59,24 +65,26 @@ impl Server {
             }
             Commands::SUBSCRIBE => {
                 if let Some(name) = message.queue {
-                    if let Some(queue) = self.caches.try_read().unwrap().get(name) {
-                        for message in &queue.message {
-                            self.stream.write_all(message).unwrap();
+                    if let Some(queue) = self.caches.read().unwrap().get(name) {
+                        for messages in queue {
+                            let mut data: Vec<u8> = vec![];
+                            data.push(messages.len() as u8);
+                            data.append(&mut messages.to_owned());
+                            self.stream.write_all(&data).unwrap();
+                            println!("INFO: RECEIVED MESSAGE TO TOPIC:{name}");
                         }
                     }
                 }
             }
             Commands::PUBLISH => {
                 if let Some(name) = message.queue {
-                    let mut queue = Queue::new(name.to_string());
-                    if let Some(message) = message.message {
-                        queue.message.insert(message.to_vec());
-                        self.caches
-                            .try_write()
-                            .unwrap()
-                            .insert(name.to_string(), queue);
-                        println!("INFO: PUBLISHED A MESSAGE TO TOPIC:{name}");
-                    }
+                    self.caches
+                        .write()
+                        .unwrap()
+                        .entry(name.to_string())
+                        .or_default()
+                        .insert(message.message.unwrap().to_vec());
+                    println!("INFO: PUBLISHED MESSAGE TO TOPIC:{name}");
                 }
             }
             Commands::ACK => {

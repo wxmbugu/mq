@@ -8,11 +8,11 @@ fn construct_message<'a>(message: Message<'a>, buffer: &'a mut [u8]) -> &'a mut 
     message.encode(buffer);
     buffer
 }
-fn send_messages(stream: &mut TcpStream) -> std::io::Result<()> {
+fn send_messages(stream: &mut TcpStream, message: &str) -> std::io::Result<()> {
     let message = Message {
         command: Some(2),
         queue: Some("dsfkaslf"),
-        message: Some("Hello from the other world! This is mars dumbshit".as_bytes()),
+        message: Some(message.as_bytes()),
     };
     let mut buffer = [0; 512];
     let message_buffer = construct_message(message, &mut buffer);
@@ -29,13 +29,20 @@ fn main() {
         .set_read_timeout(Some(Duration::from_millis(1000)))
         .unwrap();
 
-    let mut i = 0;
-    loop {
-        send_messages(&mut stream).unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(10));
-        if i == 4 {
-            break;
-        }
-        i += 1;
-    }
+    // let mut i = 0;
+    // loop {
+    send_messages(&mut stream, "Hello world!!").unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(10));
+    send_messages(&mut stream, "Trial Send message").unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(10));
+    send_messages(&mut stream, "Another Send message test").unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(10));
+    send_messages(&mut stream, "Blue eye Samurai").unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(10));
+
+    // if i == 4 {
+    // break;
+    // }
+    // i += 1;
+    // }
 }
