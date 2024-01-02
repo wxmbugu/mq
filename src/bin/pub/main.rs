@@ -30,19 +30,17 @@ fn main() {
         .unwrap();
 
     // let mut i = 0;
-    // loop {
     send_messages(&mut stream, "Hello world!!").unwrap();
-    std::thread::sleep(std::time::Duration::from_millis(10));
+    std::thread::sleep(std::time::Duration::from_millis(10000));
     send_messages(&mut stream, "Trial Send message").unwrap();
-    std::thread::sleep(std::time::Duration::from_millis(10));
+    std::thread::sleep(std::time::Duration::from_millis(10000));
     send_messages(&mut stream, "Another Send message test").unwrap();
-    std::thread::sleep(std::time::Duration::from_millis(10));
+    std::thread::sleep(std::time::Duration::from_millis(10000));
     send_messages(&mut stream, "Blue eye Samurai").unwrap();
-    std::thread::sleep(std::time::Duration::from_millis(10));
+    std::thread::sleep(std::time::Duration::from_millis(10000));
 
     // if i == 4 {
     // break;
     // }
     // i += 1;
-    // }
 }

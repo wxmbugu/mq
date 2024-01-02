@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::io::{ErrorKind, Read, Write};
+use std::io::Write;
 use std::net::TcpStream;
 use std::sync::{Arc, RwLock};
 use std::{result, u8};
@@ -24,35 +24,16 @@ impl Server {
         Server { stream, caches }
     }
     pub fn run(&mut self, buffer: &mut [u8]) {
-        loop {
-            let bytes_read = match self.stream.read(buffer) {
-                Ok(0) => {
-                    println!("INFO: Connection closed by the client");
-                    break;
-                }
-                Ok(n) => n,
-                Err(err) => match err.kind() {
-                    ErrorKind::WouldBlock => {
-                        eprintln!("EROR: would have blocked");
-                        break;
-                    }
-                    _ => {
-                        eprintln!("ERROR: Got an unexpected error: {:?}", err);
-                        break;
-                    }
-                },
-            };
-            let message = decode(&buffer[..bytes_read]);
-            match message {
-                Ok(message) => {
-                    self.handle_client_command(message);
-                }
-                Err(e) => {
-                    eprintln!("EROR: WRONG MESSAGE FORMAT {e}");
-                    self.stream
-                        .shutdown(std::net::Shutdown::Both)
-                        .expect("shutdown call failed");
-                }
+        let message = decode(buffer);
+        match message {
+            Ok(message) => {
+                self.handle_client_command(message);
+            }
+            Err(e) => {
+                eprintln!("ERROR: WRONG MESSAGE FORMAT {:?}", e);
+                self.stream
+                    .shutdown(std::net::Shutdown::Both)
+                    .expect("shutdown call failed");
             }
         }
     }
